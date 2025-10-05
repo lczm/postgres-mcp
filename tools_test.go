@@ -826,6 +826,92 @@ func TestExecuteQuery(t *testing.T) {
 	})
 }
 
+func TestExecuteQueryReadOnly(t *testing.T) {
+	ctx := context.Background()
+	
+	t.Run("INSERT should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "INSERT INTO users (username, email) VALUES ('testuser', 'test@example.com')"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		// We expect an error or IsError to be true
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected INSERT to be blocked in read-only transaction")
+		}
+		
+		if result != nil && result.IsError {
+			// Check that the error message mentions read-only or permission
+			errorMsg := result.Content[0].(*mcp.TextContent).Text
+			if !strings.Contains(strings.ToLower(errorMsg), "read-only") && 
+			   !strings.Contains(strings.ToLower(errorMsg), "cannot execute") {
+				t.Logf("Error message: %s", errorMsg)
+			}
+		}
+	})
+	
+	t.Run("UPDATE should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "UPDATE users SET email = 'newemail@example.com' WHERE id = 1"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected UPDATE to be blocked in read-only transaction")
+		}
+	})
+	
+	t.Run("DELETE should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "DELETE FROM users WHERE id = 1"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected DELETE to be blocked in read-only transaction")
+		}
+	})
+	
+	t.Run("CREATE TABLE should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "CREATE TABLE test_table (id INT PRIMARY KEY)"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected CREATE TABLE to be blocked in read-only transaction")
+		}
+	})
+	
+	t.Run("DROP TABLE should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "DROP TABLE IF EXISTS test_table"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected DROP TABLE to be blocked in read-only transaction")
+		}
+	})
+	
+	t.Run("TRUNCATE should be blocked", func(t *testing.T) {
+		args := QueryArgs{Query: "TRUNCATE TABLE users"}
+		result, _, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err == nil && (result == nil || !result.IsError) {
+			t.Fatal("Expected TRUNCATE to be blocked in read-only transaction")
+		}
+	})
+	
+	t.Run("SELECT should still work", func(t *testing.T) {
+		args := QueryArgs{Query: "SELECT COUNT(*) as count FROM users"}
+		result, data, err := ExecuteQuery(ctx, createMockRequest(args), args)
+		
+		if err != nil {
+			t.Fatalf("SELECT should work: %v", err)
+		}
+		
+		if result == nil || result.IsError {
+			t.Fatal("SELECT query should succeed in read-only transaction")
+		}
+		
+		rows := data.([]map[string]interface{})
+		if len(rows) != 1 {
+			t.Errorf("Expected 1 row, got %d", len(rows))
+		}
+	})
+}
+
 func TestExplainAnalyze(t *testing.T) {
 	ctx := context.Background()
 	

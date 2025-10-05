@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -83,7 +84,19 @@ func ExecuteQuery(ctx context.Context, req *mcp.CallToolRequest, args QueryArgs)
 		return nil, nil, fmt.Errorf("database not connected")
 	}
 
-	rows, err := pool.Query(ctx, args.Query)
+	// Start a read-only transaction to ensure only SELECT queries can be executed
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to start read-only transaction: %v", err)},
+			},
+			IsError: true,
+		}, nil, nil
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, args.Query)
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -110,6 +123,11 @@ func ExecuteQuery(ctx context.Context, req *mcp.CallToolRequest, args QueryArgs)
 
 	if err := rows.Err(); err != nil {
 		return nil, nil, fmt.Errorf("row iteration error: %v", err)
+	}
+
+	// Commit the read-only transaction
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
 	return returnJSONResult(results)

@@ -7,7 +7,7 @@ There are a few tools exposed to by this MCP server
 - `query`: Execute SQL queries and get results as JSON
 - `list_tables`: List all tables in a schema
 - `get_table_schema`: Get detailed column information for a table
-- `get_table_constraints`: Retrieve all constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) for a table
+- `get_table_constraints`: Retrieve all constraints for a table
 - `get_table_indexes`: Get index information including index types and columns
 - `explain_analyze`: Run EXPLAIN ANALYZE on queries with automatic rollback and configurable analysis options
 
