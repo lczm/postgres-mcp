@@ -39,16 +39,11 @@ Example `mcp.json`
   "servers": {
     "postgres": {
       "type": "stdio",
-      "command": "postgres-mcp",
-      "args": [],
-      "envFile": "${workspaceFolder}/.env.mcp"
+      "command": "${workspaceFolder}/run-mcp-docker.sh",
+      "args": []
     }
   }
 }
 ```
 
-Example `.env.mcp`. Use whatever db connection string
-
-```
-DATABASE_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable"
-```
+Update `run-mcp-docker.sh` to whatever connection string you use
