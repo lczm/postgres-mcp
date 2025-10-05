@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/run-mcp-docker.sh",
+      "args": []
+    }
+  }
+}

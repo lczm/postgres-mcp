@@ -1,9 +1,15 @@
-FROM postgres:16-alpine
+FROM golang:tip-trixie AS builder
 
-# Copy initialization script
-COPY init.sql /docker-entrypoint-initdb.d/
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY *.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -o postgres-mcp
 
-# Set default environment variables
-ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres
-ENV POSTGRES_DB=testdb
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+COPY --from=builder /app/postgres-mcp .
+ENTRYPOINT ["./postgres-mcp"]
